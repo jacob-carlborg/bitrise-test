@@ -15,7 +15,11 @@
 }
 
 - (void)testExample {
-    printf("***************************** testExample\n");
+#ifdef __arm64__
+    printf("***************************** ARM64\n");
+#elif __x86_64__
+    printf("***************************** X86-64\n");
+#endif
 }
 
 @end
