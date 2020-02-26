@@ -24,4 +24,8 @@
 #endif
 }
 
+- (void)testFoobar {
+    XCTAssert(false);
+}
+
 @end
