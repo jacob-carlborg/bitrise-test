@@ -20,7 +20,7 @@
     XCTAssert(false, "ARM64");
 #elif __x86_64__
     printf("************************* x86-64\n");
-    XCTAssert(true, "x86-64");
+    XCTAssert(false, "x86-64");
 #endif
 }
 
