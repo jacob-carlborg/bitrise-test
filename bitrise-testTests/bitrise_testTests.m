@@ -14,7 +14,7 @@
     // Put teardown code here. This method is called after the invocation of each test method in the class.
 }
 
-- (void)testExample {
+- (void)testAsd {
 #ifdef __arm64__
     printf("************************* ARM64\n");
     XCTAssert(false, "ARM64");
