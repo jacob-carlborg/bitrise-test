@@ -17,15 +17,10 @@
 - (void)testAsd {
 #ifdef __arm64__
     printf("************************* ARM64\n");
-    XCTAssert(false, "ARM64");
+    XCTAssert(true, "ARM64");
 #elif __x86_64__
     printf("************************* x86-64\n");
     XCTAssert(false, "x86-64");
 #endif
 }
-
-- (void)testFoobar {
-    XCTAssert(false);
-}
-
 @end
