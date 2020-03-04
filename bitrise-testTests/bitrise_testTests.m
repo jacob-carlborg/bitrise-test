@@ -8,7 +8,10 @@
 @implementation bitrise_testTests
 
 - (void)setUp {
-    freopen("foo.txt", "w+", stdout);
+    const char* a = getenv("TMPDIR");
+    char buffer[1024];
+    snprintf(buffer, 1024, "%s%s", a, "foo.txt");
+    freopen(buffer, "w+", stdout);
 }
 
 - (void)tearDown {
