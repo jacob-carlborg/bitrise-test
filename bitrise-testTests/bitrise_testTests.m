@@ -1,4 +1,5 @@
 #import <XCTest/XCTest.h>
+#include <stdio.h>
 
 @interface bitrise_testTests : XCTestCase
 
@@ -7,11 +8,11 @@
 @implementation bitrise_testTests
 
 - (void)setUp {
-    // Put setup code here. This method is called before the invocation of each test method in the class.
+    freopen("foo.txt", "w+", stdout);
 }
 
 - (void)tearDown {
-    // Put teardown code here. This method is called after the invocation of each test method in the class.
+    freopen("/dev/tty", "w", stdout);
 }
 
 - (void)testAsd {
