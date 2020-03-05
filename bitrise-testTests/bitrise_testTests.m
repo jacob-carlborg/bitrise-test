@@ -2,20 +2,27 @@
 #include <stdio.h>
 
 @interface bitrise_testTests : XCTestCase
-
+{
+    char buffer[1024];
+}
 @end
 
 @implementation bitrise_testTests
 
 - (void)setUp {
     const char* a = getenv("TMPDIR");
-    char buffer[1024];
-    snprintf(buffer, 1024, "%s%s", a, "foo.txt");
+    snprintf(buffer, 1024, "file://%s%s", a, "foo.txt");
     freopen(buffer, "w+", stdout);
 }
 
 - (void)tearDown {
     freopen("/dev/tty", "w", stdout);
+
+    NSString* str = [NSString stringWithUTF8String:buffer];
+    NSURL* url = [NSURL URLWithString:str];
+    XCTAttachment* attachment = [XCTAttachment attachmentWithContentsOfFileAtURL:url];
+    attachment.lifetime = XCTAttachmentLifetimeKeepAlways;
+    [self addAttachment:attachment];
 }
 
 - (void)testAsd {
@@ -24,7 +31,7 @@
     XCTAssert(true, "ARM64");
 #elif __x86_64__
     printf("************************* x86-64\n");
-    XCTAssert(false, "x86-64");
+    XCTAssert(true, "x86-64");
 #endif
 }
 @end
