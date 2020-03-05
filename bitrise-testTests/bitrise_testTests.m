@@ -11,7 +11,9 @@
 
 - (void)setUp {
     url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"foo.txt"]];
+    errno = 0;
     FILE* result = freopen(url.path.UTF8String, "w+", stdout);
+    XCTAssertEqualObjects(url.path, @"asd");
     XCTAssertEqual(errno, 0);
     XCTAssertNotEqual(result, NULL);
 }
@@ -26,10 +28,10 @@
 
 - (void)testAsd {
 #ifdef __arm64__
-    printf("************************* 2 ARM64\n");
+    printf("************************* 3 ARM64\n");
     XCTAssert(true, "ARM64");
 #elif __x86_64__
-    printf("************************* 2 x86-64\n");
+    printf("************************* 3 x86-64\n");
     XCTAssert(true, "x86-64");
 #endif
 }
