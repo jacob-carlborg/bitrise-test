@@ -10,9 +10,6 @@
 @implementation bitrise_testTests
 
 - (void)setUp {
-    const char* a = getenv("TMPDIR");
-    snprintf(buffer, 1024, "file://%s%s", a, "foo.txt");
-    freopen(buffer, "w+", stdout);
 }
 
 - (void)tearDown {
@@ -26,6 +23,11 @@
 }
 
 - (void)testAsd {
+    const char* a = getenv("TMPDIR");
+    snprintf(buffer, 1024, "file://%s%s", a, "foo.txt");
+    FILE* result = freopen(buffer, "w+", stdout);
+    XCTAssert(result != NULL);
+
 #ifdef __arm64__
     printf("************************* ARM64\n");
     XCTAssert(true, "ARM64");
