@@ -13,7 +13,7 @@
     url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"foo.txt"]];
     errno = 0;
     FILE* result = freopen(url.path.UTF8String, "w+", stdout);
-    XCTAssertEqualObjects(url.path, @"asd");
+//    XCTAssertEqualObjects(url.path, @"asd");
     XCTAssertEqual(errno, 0);
     XCTAssertNotEqual(result, NULL);
 }
