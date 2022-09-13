@@ -1,56 +1,128 @@
 format_version: '8'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
-# trigger_map:
-# - push_branch: "*"
-#   workflow: primary
-# - pull_request_source_branch: "*"
-#   workflow: primary
-workflows:
-  # deploy:
-  #   steps:
-  #   # - activate-ssh-key@4.0.3:
-  #   #     run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
-  #   # - git-clone@4.0.17: {}
-  #     - cache-pull@2.1.1: {}
-  #     - script@1.1.5:
-  #         title: FOOBAR
-  #     - certificate-and-profile-installer@1.10.1: {}
-  #     - xcode-test@2.4.1:
-  #         inputs:
-  #         - project_path: "$BITRISE_PROJECT_PATH"
-  #         - scheme: "$BITRISE_SCHEME"
-  #     - xcode-archive@2.7.0:
-  #         inputs:
-  #         - project_path: "$BITRISE_PROJECT_PATH"
-  #         - scheme: "$BITRISE_SCHEME"
-  #         - export_method: "$BITRISE_EXPORT_METHOD"
-  #     - deploy-to-bitrise-io@1.9.2: {}
-  #     - cache-push@2.2.1: {}
-  primary:
-    steps:
-      # - activate-ssh-key@4.0.3:
-      #     run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
-      # - git-clone@4.0.17: {}
-      - cache-pull@2.1.1: {}
-      - script@1.1.5:
-          title: Do anything with Script step
-      - certificate-and-profile-installer@1.10.1: {}
-      - xcode-test@2.4.1:
-          inputs:
-            - project_path: "$BITRISE_PROJECT_PATH"
-            - scheme: "$BITRISE_SCHEME"
-            - output_tool: xcodebuild
-      - deploy-to-bitrise-io@1.9.2: {}
-      - cache-push@2.2.1: {}
+
 app:
   envs:
-  - opts:
-      is_expand: false
-    BITRISE_PROJECT_PATH: bitrise-test.xcodeproj
-  - opts:
-      is_expand: false
-    BITRISE_SCHEME: bitrise-test
-  - opts:
-      is_expand: false
-    BITRISE_EXPORT_METHOD: development
+    - IOS_VERSION: 12.0
+
+workflows:
+  primary:
+    steps:
+      - xcparse@0.1.0:
+          title: Extract Logs
+          run_if: not .IsPR
+          is_always_run: true
+          inputs:
+            - export_to_deploy: 'yes'
+            - extract_attachments: 'no'
+            - extract_code_coverage: 'no'
+            - extract_logs: 'yes'
+            - extract_screenshots: 'no'
+
+      - cache-pull@2.1.4: {}
+      - certificate-and-profile-installer@1.10.3: {}
+
+      - xcode-build-for-test@0.4.0:
+          title: Build Xcode Project
+          run_if: not .IsPR
+
+      - virtual-device-testing-for-ios@0.9.10:
+          title: Run druntime & Phobos debug unittests on iPhone
+          run_if: not .IsPR
+          inputs:
+            - test_devices: iphone6s,12.0,en,portrait
+            - download_test_results: true
+
+      - script@1.1.6:
+          title: Assemble Test Result
+          run_if: not .IsPR
+          is_always_run: true
+          inputs:
+            - runner_bin: "$LDC_BINARY -run"
+            - script_file_path: "$BITRISE_STEP_SOURCE_DIR/main.d"
+            - content: |-
+                import std;
+
+                /**
+                 * For some reason the xcresult produced by the previous step
+                 * has a flat file structure. The code in this step fixes that
+                 * so the next step can work. This code turns a file structure
+                 * looking like this:
+                 *
+                 * ```
+                 * ├── TestLogs_Test-Transient Testing-2020.03.21_01-45-58--0700.xcresult_Data_data.0~-O0rfKEKRY3nIhjlqYnpkA66cLiUonVgCNYwugi05n9Jx5OzM2-LySzkK1msGnDLSE8q0NRhrhw7IzkvLpyeNw==
+                 * ├── TestLogs_Test-Transient Testing-2020.03.21_01-45-58--0700.xcresult_Data_data.0~1CjDi6o46z-JhUr8R_x8s2FSUso2vKw5JRCkXMC0u_NrVR82R9FCih_SAFsZ6QBlodOkzBPOcj109apBnmq3Xw==
+                 * ```
+                 *
+                 * Into a file and directory structure like this:
+                 *
+                 * ```
+                 * TestLogs_Test-Transient Testing-2020.03.21_01-45-58--0700.xcresult
+                 * ├── Data
+                 * │   ├── data.0~-O0rfKEKRY3nIhjlqYnpkA66cLiUonVgCNYwugi05n9Jx5OzM2-LySzkK1msGnDLSE8q0NRhrhw7IzkvLpyeNw==
+                 * │   ├── data.0~1CjDi6o46z-JhUr8R_x8s2FSUso2vKw5JRCkXMC0u_NrVR82R9FCih_SAFsZ6QBlodOkzBPOcj109apBnmq3Xw==
+                 * ```
+                 */
+                void main()
+                {
+                    static void copy(string source, string target)
+                    {
+                        const splitResult = target.split(".xcresult");
+                        const xcresultDir = splitResult[0] ~ ".xcresult";
+                        const embeddedDir = splitResult[1].dirName[1 .. $];
+                        const targetDir = buildPath(xcresultDir, embeddedDir);
+
+                        mkdirRecurse(targetDir);
+                        std.file.copy(source, target);
+                    }
+
+                    const source = environment["VDTESTING_DOWNLOADED_FILES_DIR"];
+
+                    auto paths = dirEntries(source, "*.xcresult*", SpanMode.shallow)
+                        .map!(e => e.name.absolutePath)
+                        .array;
+
+                    const sourceBase = (paths.front.split(".xcresult")[0] ~ ".xcresult").baseName;
+                    const targetBasePath = "xcresult".absolutePath;
+                    const xcresultPath = targetBasePath.buildPath(sourceBase);
+
+                    spawnProcess(["envman", "add", "--key", "BITRISE_XCRESULT_PATH", "--value",
+                        xcresultPath]).wait;
+
+                    paths
+                        .map!(e => e.split(".xcresult")[1])
+                        .map!(e => e.split("."))
+                        .map!(e => tuple(e[0].split("_"), e[1]))
+                        .map!(e => tuple(e[0].filter!(a => !a.empty).array, e[1]))
+                        .map!(e => tuple(e[0][0 .. $ - 1], e[0][$ - 1 .. $].front ~ '.' ~ e[1]))
+                        .map!(e => e[0].buildPath.buildPath(e[1]))
+                        .map!(e => targetBasePath.buildPath(sourceBase, e))
+                        .zip(paths)
+                        .each!(e => copy(e[1], e[0]));
+                }
+
+      - xcparse@0.1.0:
+          title: Extract Logs
+          run_if: not .IsPR
+          is_always_run: true
+          inputs:
+            - export_to_deploy: 'yes'
+            - extract_attachments: 'no'
+            - extract_code_coverage: 'no'
+            - extract_logs: 'yes'
+            - extract_screenshots: 'no'
+
+      - script@1.1.6:
+          title: Print Logs
+          run_if: not .IsPR
+          is_always_run: true
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                unzip -qq "$XCPARSE_LOGS_PATH"
+                find logs -name StandardOutputAndStandardError.txt | head -1 | xargs cat
+
+      - deploy-to-bitrise-io@1.9.6: {}
+      - cache-push@2.2.3: {}
