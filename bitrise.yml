@@ -4,7 +4,7 @@ project_type: ios
 
 meta:
   bitrise.io:
-    stack: osx-xcode-14.0.x
+    stack: osx-xcode-13.4.x
 
 trigger_map:
   - push_branch: "*"
