@@ -27,6 +27,11 @@ workflows:
       - cache-pull@2.1.4: {}
       - certificate-and-profile-installer@1.10.3: {}
 
+      - git-clone@6:
+        title: Clone LDC
+        inputs:
+          - repository_url: https://github.com/ldc-developers/ldc
+
       - script@1.1.6:
           title: Download LLVM
           inputs:
